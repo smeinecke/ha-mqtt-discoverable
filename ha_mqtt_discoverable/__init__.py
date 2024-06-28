@@ -583,6 +583,7 @@ class Discoverable(Generic[EntityType]):
     _entity: EntityType
 
     mqtt_client: mqtt.Client
+    on_connect: Optional[Callable] = None
     need_mqtt_connect: bool = True
     wrote_configuration: bool = False
     # MQTT topics
@@ -656,7 +657,7 @@ class Discoverable(Generic[EntityType]):
         self._setup_client(on_connect)
         # If there is a callback function defined, the user must manually connect
         # to the MQTT client
-        if not on_connect and self.need_mqtt_connect:
+        if not on_connect:
             self._connect_client()
 
     def __str__(self) -> str:
@@ -683,6 +684,7 @@ wrote_configuration: {self.wrote_configuration}
             logger.debug("Reusing existing MQTT client")
             self.mqtt_client = mqtt_settings.client
             self.need_mqtt_connect = False
+            self.on_connect = on_connect
             return
 
         self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
@@ -742,6 +744,10 @@ wrote_configuration: {self.wrote_configuration}
     def _connect_client(self) -> None:
         """Connect the client to the MQTT broker, start its onw internal loop in
         a separate thread"""
+        if not self.need_mqtt_connect:
+            if self.on_connect:
+                self.on_connect(self.mqtt_client)
+            return
         result = self.mqtt_client.connect(
             self._settings.mqtt.host, self._settings.mqtt.port
         )
@@ -867,6 +873,8 @@ wrote_configuration: {self.wrote_configuration}
 
     def __del__(self):
         """Cleanly shutdown the internal MQTT client"""
+        if not self.need_mqtt_connect:
+            return
         logger.debug("Shutting down MQTT client")
         self.mqtt_client.disconnect()
         self.mqtt_client.loop_stop()
