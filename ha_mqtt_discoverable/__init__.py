@@ -557,6 +557,10 @@ class Settings(GenericModel, Generic[EntityType]):
         """The root of the topic tree where HA is listening for messages"""
         state_prefix: str = "hmd"
         """The root of the topic tree ha-mqtt-discovery publishes its state messages"""
+        reuse_client: bool = False
+        """Reuse an existing MQTT client if enabled"""
+        __client: Optional[mqtt.Client] = None
+        """Internal reference to the MQTT client"""
 
     mqtt: MQTT
     """Connection to MQTT broker"""
@@ -672,7 +676,15 @@ wrote_configuration: {self.wrote_configuration}
             f"Creating mqtt client ({mqtt_settings.client_name}) for "
             f"{mqtt_settings.host}:{mqtt_settings.port}"
         )
-        self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
+        if mqtt_settings.reuse_client and mqtt_settings.__client:
+            logger.debug("Reusing existing MQTT client")
+            self.mqtt_client = mqtt_settings.__client
+        else:
+            self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
+
+        if mqtt_settings.reuse_client:
+            self._settings.mqtt.__client = self.mqtt_client
+
         if mqtt_settings.tls_key:
             logger.info(
                 f"Connecting to {mqtt_settings.host}:{mqtt_settings.port} with SSL and client certificate authentication"
