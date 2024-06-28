@@ -559,7 +559,7 @@ class Settings(GenericModel, Generic[EntityType]):
         """The root of the topic tree ha-mqtt-discovery publishes its state messages"""
         reuse_client: bool = False
         """Reuse an existing MQTT client if enabled"""
-        __client: Optional[mqtt.Client] = None
+        client: Optional[mqtt.Client] = None
         """Internal reference to the MQTT client"""
 
     mqtt: MQTT
@@ -676,14 +676,14 @@ wrote_configuration: {self.wrote_configuration}
             f"Creating mqtt client ({mqtt_settings.client_name}) for "
             f"{mqtt_settings.host}:{mqtt_settings.port}"
         )
-        if mqtt_settings.reuse_client and mqtt_settings.__client:
+        if mqtt_settings.reuse_client and mqtt_settings.client:
             logger.debug("Reusing existing MQTT client")
-            self.mqtt_client = mqtt_settings.__client
+            self.mqtt_client = mqtt_settings.client
         else:
             self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
 
         if mqtt_settings.reuse_client:
-            self._settings.mqtt.__client = self.mqtt_client
+            self._settings.mqtt.client = self.mqtt_client
 
         if mqtt_settings.tls_key:
             logger.info(
