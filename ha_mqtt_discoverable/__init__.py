@@ -689,9 +689,6 @@ wrote_configuration: {self.wrote_configuration}
 
         self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
 
-        if mqtt_settings.reuse_client:
-            self._settings.mqtt.client = self.mqtt_client
-
         if mqtt_settings.tls_key:
             logger.info(
                 f"Connecting to {mqtt_settings.host}:{mqtt_settings.port} with SSL and client certificate authentication"
