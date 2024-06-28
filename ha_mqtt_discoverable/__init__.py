@@ -561,6 +561,8 @@ class Settings(GenericModel, Generic[EntityType]):
         """Reuse an existing MQTT client if enabled"""
         client: Optional[mqtt.Client] = None
         """Internal reference to the MQTT client"""
+        class Config:
+            arbitrary_types_allowed = True
 
     mqtt: MQTT
     """Connection to MQTT broker"""
@@ -581,6 +583,7 @@ class Discoverable(Generic[EntityType]):
     _entity: EntityType
 
     mqtt_client: mqtt.Client
+    need_mqtt_connect: bool = True
     wrote_configuration: bool = False
     # MQTT topics
     _entity_topic: str
@@ -653,7 +656,7 @@ class Discoverable(Generic[EntityType]):
         self._setup_client(on_connect)
         # If there is a callback function defined, the user must manually connect
         # to the MQTT client
-        if not on_connect:
+        if not on_connect and self.need_mqtt_connect:
             self._connect_client()
 
     def __str__(self) -> str:
@@ -679,8 +682,10 @@ wrote_configuration: {self.wrote_configuration}
         if mqtt_settings.reuse_client and mqtt_settings.client:
             logger.debug("Reusing existing MQTT client")
             self.mqtt_client = mqtt_settings.client
-        else:
-            self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
+            self.need_mqtt_connect = False
+            return
+
+        self.mqtt_client = mqtt.Client(mqtt_settings.client_name)
 
         if mqtt_settings.reuse_client:
             self._settings.mqtt.client = self.mqtt_client
